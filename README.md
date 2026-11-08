@@ -1,9 +1,12 @@
-# 🎬 YouTube Downloader
+# 🎬 YouTube to MP3 & MP4 Converter for Windows (Free)
 
-Save any YouTube video as an **MP3** (just the audio — music, podcasts) or an **MP4** (the full
-video) on your Windows PC. Works for a single video or a whole playlist.
+A **free YouTube to MP3 and MP4 converter** for Windows. Download any YouTube video as an **MP3**
+(just the audio — music, podcasts) or an **MP4** (the full video), from a single video to a whole
+playlist — in high quality, with no ads and no sign-up.
 
-No setup, no sign-up, no ads. Just one file — open it and go.
+Just one file — open it and go. 100% free and open source.
+
+🌐 **Website:** https://ahm-raz.github.io/youtube-to-mp3/
 
 > Please only download videos you own or have permission to download (your own uploads,
 > Creative Commons, royalty-free music, etc.).
