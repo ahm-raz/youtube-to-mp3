@@ -1,14 +1,15 @@
 using System;
 using System.IO;
+using System.IO.Compression;
 using System.Reflection;
 using System.Threading;
 
 namespace YouTubeToMp3
 {
-    // In the single-file build, yt-dlp.exe and ffmpeg.exe are embedded as resources.
-    // On first run they are unpacked next to the user's data, so the app is "just one exe"
-    // to copy around. If they are NOT embedded (a plain dev build), we fall back to the
-    // files sitting next to the exe.
+    // In the single-file build, yt-dlp.exe and ffmpeg.exe are embedded (gzip-compressed) as
+    // resources. On first run they are decompressed next to the user's data, so the app is
+    // "just one exe" to copy around. If they are NOT embedded (a plain dev build), we fall back
+    // to the files sitting next to the exe.
     static class Tools
     {
         static readonly object Gate = new object();
@@ -19,9 +20,11 @@ namespace YouTubeToMp3
 
         public static string YtDlp { get { return Path.Combine(Dir, "yt-dlp.exe"); } }
         public static string FfmpegDir { get { return Dir; } }
+        public static string Aria2c { get { return Path.Combine(Dir, "aria2c.exe"); } }
 
         // Extract embedded binaries if needed. Returns false (with 'missing' set) only when a
-        // required tool is neither embedded nor found next to the exe.
+        // required tool is neither embedded nor found next to the exe. aria2c is optional: it
+        // only speeds downloads up, so a failure to unpack it is not fatal.
         public static bool Ensure(out string missing)
         {
             missing = null;
@@ -29,17 +32,18 @@ namespace YouTubeToMp3
             {
                 if (!Extract("yt-dlp.exe")) { missing = "yt-dlp.exe"; return false; }
                 if (!Extract("ffmpeg.exe")) { missing = "ffmpeg.exe"; return false; }
+                try { Extract("aria2c.exe"); } catch { /* optional speed-up */ }
                 return true;
             }
         }
 
-        // Writes the embedded resource to the tools dir if it is missing or a different size.
-        // Returns true when the file ends up present (whether just written or already good,
-        // including the dev-build case where it lives next to the exe).
+        // Unpacks the embedded resource for 'name' (preferring a "<name>.gz" compressed copy) to
+        // the tools dir, but only when it is missing or a different build than last time.
         static bool Extract(string name)
         {
             var asm = Assembly.GetExecutingAssembly();
-            string resName = ResourceName(asm, name);
+            bool gz;
+            string resName = ResourceName(asm, name, out gz);
             string target = Path.Combine(Dir, name);
 
             if (resName == null)
@@ -53,14 +57,27 @@ namespace YouTubeToMp3
             using (var src = asm.GetManifestResourceStream(resName))
             {
                 if (src == null) return File.Exists(target);
-                if (File.Exists(target) && new FileInfo(target).Length == src.Length)
-                    return true; // already unpacked and current
+
+                // The resource's (compressed) length is a cheap signature for "is this still the
+                // build I last unpacked?" — stored alongside the target so we skip repeat work.
+                string marker = target + ".src";
+                string sig = src.Length.ToString();
+                if (File.Exists(target) && File.Exists(marker) &&
+                    File.ReadAllText(marker) == sig)
+                    return true;
 
                 Directory.CreateDirectory(Dir);
                 string tmp = target + "." + Guid.NewGuid().ToString("N") + ".tmp";
                 using (var dst = new FileStream(tmp, FileMode.Create, FileAccess.Write, FileShare.None))
-                    src.CopyTo(dst);
+                {
+                    if (gz)
+                        using (var z = new GZipStream(src, CompressionMode.Decompress))
+                            z.CopyTo(dst);
+                    else
+                        src.CopyTo(dst);
+                }
                 ReplaceFile(tmp, target);
+                File.WriteAllText(marker, sig);
                 return true;
             }
         }
@@ -98,14 +115,24 @@ namespace YouTubeToMp3
             }
         }
 
-        // Resource names are prefixed with the assembly name by csc; match by suffix.
-        static string ResourceName(Assembly asm, string name)
+        // Resource names are prefixed with the assembly name by csc; match by suffix. Prefers a
+        // gzip-compressed "<name>.gz" resource, falling back to a raw "<name>".
+        static string ResourceName(Assembly asm, string name, out bool gz)
         {
+            string raw = null;
             foreach (string r in asm.GetManifestResourceNames())
-                if (r.Equals(name, StringComparison.OrdinalIgnoreCase) ||
-                    r.EndsWith("." + name, StringComparison.OrdinalIgnoreCase))
-                    return r;
-            return null;
+            {
+                if (Matches(r, name + ".gz")) { gz = true; return r; }
+                if (Matches(r, name)) raw = r;
+            }
+            gz = false;
+            return raw;
+        }
+
+        static bool Matches(string resource, string name)
+        {
+            return resource.Equals(name, StringComparison.OrdinalIgnoreCase) ||
+                   resource.EndsWith("." + name, StringComparison.OrdinalIgnoreCase);
         }
     }
 }
