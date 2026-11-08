@@ -1,77 +1,89 @@
-# YouTube Downloader (MP3 / MP4)
+# 🎬 YouTube Downloader
 
-A small Windows desktop app that downloads a video as an **MP3** audio file or an **MP4** video —
-single videos or whole playlists. It's a lightweight WinForms front-end over the standard
-open-source tools **[yt-dlp](https://github.com/yt-dlp/yt-dlp)**,
-**[ffmpeg](https://ffmpeg.org/)**, and **[aria2c](https://aria2.github.io/)**.
+Save any YouTube video as an **MP3** (just the audio — music, podcasts) or an **MP4** (the full
+video) on your Windows PC. Works for a single video or a whole playlist.
 
-> Use it only for content you own or have the rights to download (your own uploads,
-> Creative Commons, etc.). Downloading copyrighted material may violate a site's Terms of Service.
+No setup, no sign-up, no ads. Just one file — open it and go.
 
-## ⬇️ Download (no install needed)
+> Please only download videos you own or have permission to download (your own uploads,
+> Creative Commons, royalty-free music, etc.).
 
-**[Download YouTubeToMp3.exe](https://github.com/ahm-raz/youtube-to-mp3/releases/latest/download/YouTubeToMp3.exe)** — one file, ~88 MB.
+---
 
-1. Click the link above and save the `.exe`.
-2. Double-click it to run. (Windows SmartScreen may warn about an unknown publisher — click
-   **More info → Run anyway**.)
-3. Paste a URL, choose **MP3** or **MP4** and a quality, click **Download**. Done.
+## ⬇️ Get it
 
-Nothing to install — yt-dlp, ffmpeg and aria2c are **built into the exe** and unpacked
-automatically on first run. You can copy this single file to any Windows PC.
+**[Click here to download the app](https://github.com/ahm-raz/youtube-to-mp3/releases/latest/download/YouTubeToMp3.exe)** (one file, about 88 MB)
 
-👉 New here? See **[HowToUse.md](HowToUse.md)** for a step-by-step walkthrough.
+Save it anywhere you like — your Desktop is fine. Need help installing? → **[SETUP.md](SETUP.md)**
 
-## Features
+## ▶️ How to use it (30 seconds)
 
-- **MP3 audio** (Best VBR / 320 / 256 / 192 / 128 kbps) or **MP4 video** (Best / 1080p / 720p / 480p / 360p)
-- MP4 prefers **H.264 + AAC** for playback on any device
-- **Playlists** — every item is listed with a live per-video status (queued → downloading % → ✓ done)
-- **Fast downloads** via aria2c multi-connection (beats single-connection throttling)
-- **Settings page** — fast mode, embed thumbnail/metadata, open-folder-when-done, **dark mode**,
-  and **simultaneous downloads** (1 at a time, or up to 5 in parallel)
-- Embeds thumbnail + metadata; remembers your preferences
-- **Single self-contained `.exe`** — copy just the one file to another PC
+1. **Open** the file you downloaded (`YouTubeToMp3.exe`).
+   - The first time, Windows might show a blue "Windows protected your PC" box. Click
+     **More info**, then **Run anyway**. (This appears for any small app — it's safe to continue.)
+2. **Copy** the link of the video you want (from your browser's address bar).
+3. **Paste** it into the app (there's a Paste button).
+4. Choose **MP3** (audio) or **MP4** (video), and pick the quality.
+5. Click the big **Download** button.
 
-## Build from source
+That's it. Your file is saved in your **Music → YouTubeToMp3** folder. Click **Open folder** in
+the app to find it instantly.
 
-Requires Windows with the .NET Framework C# compiler (ships with Windows). From the project folder:
+## ✨ What it can do
+
+- 🎵 **MP3 audio** or 🎥 **MP4 video** — your choice
+- 📃 **Whole playlists** — it lists every video and shows which ones are done
+- ⚡ **Fast** — downloads in multiple pieces at once
+- ⚙️ **Settings** (the gear button) you can turn on for yourself:
+  - **Dark mode**
+  - Open the folder automatically when a download finishes
+  - Add cover art and song info to MP3s
+  - Download several videos at the same time
+- 💾 **One file** — copy it to any other Windows PC and it just works. It remembers your choices.
+
+## ❓ Common questions
+
+**Where did my file go?** → Your **Music → YouTubeToMp3** folder. Click **Open folder** in the app.
+
+**A video says "Failed"** → It may be private or unavailable. Other videos in a playlist keep going.
+
+**Is it free?** → Yes, completely.
+
+**Can I put it on another computer?** → Yes — just copy the one file over.
+
+**How do I install it?** → See **[SETUP.md](SETUP.md)**
+
+**Need more help using it?** → See the step-by-step guide: **[HowToUse.md](HowToUse.md)**
+
+---
+
+<details>
+<summary>🛠️ For developers (building from source)</summary>
+
+A lightweight C# WinForms app that wraps the open-source tools
+[yt-dlp](https://github.com/yt-dlp/yt-dlp), [ffmpeg](https://ffmpeg.org/) and
+[aria2c](https://aria2.github.io/). The build downloads those three tools, gzip-compresses them,
+and embeds them inside a single `.exe` that unpacks them on first run.
 
 ```powershell
-.\build.ps1          # downloads yt-dlp + ffmpeg, builds a single-file exe into .\bin
-.\build.ps1 -Install # also installs to %LOCALAPPDATA%\Programs\YouTubeToMp3 + Start-menu shortcut, then launches
+.\build.ps1          # downloads the tools, builds bin\YouTubeToMp3.exe (~88 MB)
+.\build.ps1 -Install # also installs to %LOCALAPPDATA%\Programs + Start-menu shortcut, then launches
 ```
 
-The build downloads `yt-dlp.exe`, `ffmpeg.exe` and `aria2c.exe`, gzip-compresses them, and embeds
-them into `YouTubeToMp3.exe`. The resulting exe (~88 MB) is all you need to run or share.
-
-## How it works
-
-On first run the app unpacks the embedded tools to `%LOCALAPPDATA%\YouTubeToMp3\tools`. For a
-playlist it first lists the items (`yt-dlp --flat-playlist --print …`) so the UI can show them,
-then downloads each — one at a time or several in parallel — roughly like:
+Source layout:
 
 ```
-# MP3
-yt-dlp --extract-audio --audio-format mp3 --audio-quality <q> -N 8 [--downloader aria2c] \
-       --embed-thumbnail --embed-metadata --ffmpeg-location <dir> -o "<out>\%(title)s.%(ext)s" <url>
-
-# MP4 (prefers H.264 + AAC, merged)
-yt-dlp -f "bv*[vcodec^=avc1][height<=<h>]+ba[ext=m4a]/…" --merge-output-format mp4 … <url>
+src/Program.cs    entry point
+src/MainForm.cs   the window: header, MP3/MP4 toggle, downloads list, settings, theming
+src/Converter.cs  lists playlist items, downloads (one at a time or in parallel), tracks progress
+src/Settings.cs   saved preferences (%LOCALAPPDATA%\YouTubeToMp3\settings.txt)
+src/Theme.cs      light / dark palettes
+src/Tools.cs      unpacks the embedded yt-dlp + ffmpeg + aria2c on first run
+src/AppIcon.cs    app icon, drawn in code
+src/Native.cs     the few Win32 calls used
+build.ps1         fetch tools, compress, compile single-file exe, optional install
 ```
 
-Files are saved to `Music\YouTubeToMp3` by default (changeable in the app).
+MP4 prefers H.264 + AAC for broad device compatibility. Files save to `Music\YouTubeToMp3`.
 
-## Project layout
-
-```
-src/Program.cs      entry point
-src/MainForm.cs     the window: header, MP3/MP4 toggle, downloads list, settings page, theming
-src/Converter.cs    enumerates playlist items, downloads (serial/parallel), parses progress
-src/Settings.cs     saved preferences (%LOCALAPPDATA%\YouTubeToMp3\settings.txt)
-src/Theme.cs        light / dark palettes
-src/Tools.cs        unpacks the embedded, gzip'd yt-dlp + ffmpeg + aria2c on first run
-src/AppIcon.cs      app icon, drawn in code
-src/Native.cs       the couple of Win32 calls used
-build.ps1           fetch tools, gzip, compile single-file exe, optional install
-```
+</details>
